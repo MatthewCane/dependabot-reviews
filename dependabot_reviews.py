@@ -7,7 +7,7 @@
 # ///
 import subprocess
 import json
-from rich import print
+from rich.console import Console
 from furl import furl
 
 
@@ -105,14 +105,16 @@ def format_message(pr: PullRequest):
 
 
 def main() -> None:
-    print("Fetching PRs...")
-    prs = get_pending_dependabot_prs()
-    print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
+    terminal = Console()
+    with terminal.status("Fetching PRs..."):
+        prs = get_pending_dependabot_prs()
+    terminal.print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
     for pr in prs:
-        print(format_message(pr))
-        print("Approve? (y/N) ", end="")
-        if input().lower() == "y":
-            approve_pr(pr)
+        terminal.print(format_message(pr))
+        terminal.print("Approve? (y/N) ", end="")
+        if terminal.input().lower() == "y":
+            with terminal.status("Approving..."):
+                approve_pr(pr)
 
 
 if __name__ == "__main__":
