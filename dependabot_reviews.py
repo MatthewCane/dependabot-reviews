@@ -9,6 +9,7 @@ import subprocess
 import json
 from rich.console import Console
 from furl import furl
+from time import sleep
 
 
 class PullRequest:
@@ -115,6 +116,9 @@ def main() -> None:
         if terminal.input().lower() == "y":
             with terminal.status("Approving..."):
                 approve_pr(pr)
+                terminal.print("[green][bold]Approved[/]")
+        else:
+            terminal.print("[yellow]Skipped[/yellow]")
 
 
 if __name__ == "__main__":
