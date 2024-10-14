@@ -113,7 +113,7 @@ def main() -> None:
     for pr in prs:
         terminal.print(format_message(pr))
         terminal.print("Approve? (y/N) ", end="")
-        if terminal.input().lower() == "y":
+        if terminal.input().lower().strip() in ["y", "yes"]:
             with terminal.status("Approving..."):
                 approve_pr(pr)
                 terminal.print("[green][bold]Approved[/]")
