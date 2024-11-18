@@ -9,19 +9,18 @@ import subprocess
 import json
 from rich.console import Console
 from furl import furl
-from time import sleep
 
 
 class PullRequest:
-    def __init__(self, repositry: str, title: str, url: str, labels: list[str]):
-        self.repositry: str = repositry
+    def __init__(self, repository: str, title: str, url: str, labels: list[str]):
+        self.repository: str = repository
         self.title: str = title
         self._url: furl = furl(url)
         self.labels_str: str = self._format_labels(labels)
         self.checks_str: str = self._get_and_format_checks()
 
     def __repr__(self) -> str:
-        return f"PullRequest(repositry='{self.repositry}', title='{self.title}', url='{self.url}', labels='{self.labels}')"
+        return f"PullRequest(repository='{self.repository}', title='{self.title}', url='{self.url}', labels='{self.labels}')"
 
     @property
     def url(self) -> str:
@@ -47,7 +46,7 @@ class PullRequest:
                 return "[green] Checks passed[/green]"
 
 
-def execute_gh_command(command: str, return_response: bool = True) -> dict:
+def execute_gh_command(command: str, return_response: bool = True) -> dict | None:
     """
     Execute a Github CLI command and return the JSON output.
     """
@@ -82,7 +81,7 @@ def get_pending_dependabot_prs() -> list[PullRequest]:
     )
     return [
         PullRequest(
-            repositry=pr["repository"]["nameWithOwner"],
+            repository=pr["repository"]["nameWithOwner"],
             title=pr["title"],
             url=pr["url"],
             labels=pr["labels"],
@@ -101,8 +100,15 @@ def approve_pr(pr: str) -> None:
     )
 
 
+def close_pr(pr: PullRequest) -> None:
+    """
+    Closes a PR.
+    """
+    execute_gh_command(f"pr close {pr.url}", return_response=False)
+
+
 def format_message(pr: PullRequest):
-    return f"[bold]{pr.repositry}[/bold]:{pr.labels_str} '{pr.title}' {pr.url}{pr.checks_str}"
+    return f"[bold]{pr.repository}[/bold]:{pr.labels_str} '{pr.title}' {pr.url}{pr.checks_str}"
 
 
 def main() -> None:
@@ -112,11 +118,15 @@ def main() -> None:
     terminal.print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
     for pr in prs:
         terminal.print(format_message(pr))
-        terminal.print("Approve? (y/N) ", end="")
+        terminal.print("Approve? (y[es]/c[lose]/N[o]) ", end="")
         if terminal.input().lower().strip() in ["y", "yes"]:
             with terminal.status("Approving..."):
                 approve_pr(pr)
                 terminal.print("[green][bold]Approved[/]")
+        elif terminal.input().lower().strip() in ["c", "close"]:
+            with terminal.status("Closing..."):
+                close_pr(pr)
+                terminal.print("[red][bold]Closed[/]")
         else:
             terminal.print("[yellow]Skipped[/yellow]")
 
