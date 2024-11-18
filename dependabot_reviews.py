@@ -118,12 +118,16 @@ def main() -> None:
     terminal.print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
     for pr in prs:
         terminal.print(format_message(pr))
-        terminal.print("Approve? (y[es]/c[lose]/N[o]) ", end="")
-        if terminal.input().lower().strip() in ["y", "yes"]:
+        terminal.print(
+            "Approve? ([bold]y[/bold]es/[bold]c[/bold]lose/[bold]N[/bold]o) ",
+            end="",
+        )
+        option = terminal.input().lower().strip()
+        if option in ["y", "yes"]:
             with terminal.status("Approving..."):
                 approve_pr(pr)
                 terminal.print("[green][bold]Approved[/]")
-        elif terminal.input().lower().strip() in ["c", "close"]:
+        elif option in ["c", "close"]:
             with terminal.status("Closing..."):
                 close_pr(pr)
                 terminal.print("[red][bold]Closed[/]")
