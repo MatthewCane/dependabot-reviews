@@ -23,3 +23,9 @@ If you have `uv` installed, you can run the script directly with:
 ```bash
 uv run dependabot_reviews.py
 ```
+
+Alternatively, you can copy the script into a directory in your PATH and run it directly:
+
+```bash
+cp dependabot_reviews.py ~/bin/dependabot-reviews
+```
