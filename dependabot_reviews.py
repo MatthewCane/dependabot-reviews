@@ -7,6 +7,7 @@
 #     "furl",
 # ]
 # ///
+import asyncio
 import subprocess
 import json
 from rich.console import Console
@@ -74,22 +75,18 @@ def execute_gh_command(command: str, return_response: bool = True) -> dict | Non
         ) from e
 
 
-def get_pending_dependabot_prs() -> list[PullRequest]:
+async def get_pending_dependabot_prs() -> list[PullRequest]:
     """
     Return a list of pending dependabot PRs.
     """
     response = execute_gh_command(
         "search prs --state open --author 'dependabot[bot]'  --review-requested @me --json repository,title,url,labels"
     )
-    return [
-        PullRequest(
-            repository=pr["repository"]["nameWithOwner"],
-            title=pr["title"],
-            url=pr["url"],
-            labels=pr["labels"],
-        )
-        for pr in response
-    ]
+
+    return await asyncio.gather(
+        *[asyncio.to_thread(PullRequest, pr["repository"]["nameWithOwner"], pr["title"], pr["url"], pr["labels"]) for pr in response]
+    )
+    
 
 
 def approve_pr(pr: str) -> None:
@@ -113,10 +110,10 @@ def format_message(pr: PullRequest):
     return f"[bold]{pr.repository}[/bold]:{pr.labels_str} '{pr.title}' {pr.url}{pr.checks_str}"
 
 
-def main() -> None:
+async def main() -> None:
     terminal = Console()
     with terminal.status("Fetching PRs..."):
-        prs = get_pending_dependabot_prs()
+        prs = await get_pending_dependabot_prs()
     terminal.print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
     for pr in prs:
         terminal.print(format_message(pr))
@@ -139,6 +136,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
+        print("\nAborted")
         exit(0)
