@@ -1,6 +1,7 @@
 import asyncio
 import json
 import subprocess
+import webbrowser
 from textwrap import dedent
 
 from furl import furl
@@ -124,18 +125,25 @@ async def main() -> None:
     terminal.print(f"Found {count} pending dependabot PRs to review")
     for pr in prs:
         terminal.print(pr)
-        terminal.print(
-            "Approve? ([bold]y[/bold]es/[bold]c[/bold]lose/[bold]N[/bold]o) ",
-            end="",
-        )
-        option = terminal.input().lower().strip()
-        if option in ["y", "yes"]:
-            with terminal.status("Approving..."):
-                pr.approve()
-                terminal.print("[green][bold]Approved[/]")
-        elif option in ["c", "close"]:
-            with terminal.status("Closing..."):
-                pr.close()
-                terminal.print("[red][bold]Closed[/]")
-        else:
-            terminal.print("[yellow]Skipped[/yellow]")
+        while True:
+            terminal.print(
+                "Approve? ([bold]y[/]es/[bold]c[/]lose/[bold]o[/]pen in browser/[bold]N[/]o) ",
+                end="",
+            )
+            option = terminal.input().lower().strip()
+            if option in ["y", "yes"]:
+                with terminal.status("Approving..."):
+                    pr.approve()
+                    terminal.print("[green][bold]Approved[/]")
+                    break
+            elif option in ["c", "close"]:
+                with terminal.status("Closing..."):
+                    pr.close()
+                    terminal.print("[red][bold]Closed[/]")
+                    break
+            elif option in ["o", "open"]:
+                webbrowser.open(pr.url)
+                terminal.print("[blue]Opened in browser[/blue]")
+            else:
+                terminal.print("[yellow]Skipped[/yellow]")
+                break
