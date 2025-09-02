@@ -46,7 +46,7 @@ class PullRequest:
         )["statusCheckRollup"]
 
         if status_checks == []:
-            return "[yellow] Checks not found[/yellow]"
+            return "[yellow]Checks not found[/yellow]"
         for check in status_checks:
             if check["conclusion"] != "SUCCESS":
                 return "[red]Checks not passed[/red]"
