@@ -16,6 +16,9 @@ dev = [
     "ruff>=0.12.11",
 ]
 
+[project.scripts]
+dependabot-reviews = "dependabot_reviews.__main__:main"
+
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
