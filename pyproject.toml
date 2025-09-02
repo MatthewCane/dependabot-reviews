@@ -17,7 +17,7 @@ dev = [
 ]
 
 [project.scripts]
-dependabot-reviews = "dependabot_reviews.__main__:main"
+dependabot-reviews = "dependabot_reviews.dependabot_reviews:cli"
 
 [build-system]
 requires = ["uv_build"]

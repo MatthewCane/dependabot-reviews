@@ -147,3 +147,11 @@ async def main() -> None:
             else:
                 terminal.print("[yellow]Skipped[/yellow]")
                 break
+
+
+def cli():
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nAborted")
+        exit(0)
