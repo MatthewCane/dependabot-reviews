@@ -59,17 +59,19 @@ class PullRequest:
         """
         execute_gh_command(
             f"pr review {self.url} --approve --body '@dependabot merge'",
-            return_response=False,
+            return_json=False,
         )
 
     def close(self) -> None:
         """
         Closes the PR without merging.
         """
-        execute_gh_command(f"pr close {self.url}", return_response=False)
+        execute_gh_command(f"pr close {self.url}", return_json=False)
 
 
-def execute_gh_command(command: str, return_response: bool = True) -> dict | None:
+def execute_gh_command(
+    command: str, return_json: bool = True, return_status: bool = False
+) -> dict | None:
     """
     Execute a Github CLI command and return the JSON output.
     """
@@ -82,8 +84,10 @@ def execute_gh_command(command: str, return_response: bool = True) -> dict | Non
             text=True,
             check=True,
         )
-        if return_response:
+        if return_json:
             return json.loads(result.stdout)
+        if return_status:
+            return not bool(result.returncode)
     except subprocess.CalledProcessError as e:
         error_message = f"Command failed with exit code {e.returncode}\n"
         error_message += f"stdout: {e.stdout}\n"
@@ -117,8 +121,23 @@ async def get_pending_dependabot_prs() -> list[PullRequest]:
     )
 
 
+def check_gh_auth_status() -> bool:
+    """
+    Check if the user is authenticated with GitHub CLI.
+    """
+    try:
+        return execute_gh_command("auth status", return_json=False, return_status=True)
+    except RuntimeError:
+        return False
+
+
 async def main() -> None:
     terminal = Console()
+    if not check_gh_auth_status():
+        terminal.print(
+            "[red]You are not logged in to GitHub CLI or the Github CLI is not installed. Please run 'gh auth login' and try again.[/red]"
+        )
+        exit(1)
     with terminal.status("Fetching PRs..."):
         prs = await get_pending_dependabot_prs()
     count = f"[red]{len(prs)}[/red]" if prs else "[green]0[/green]"

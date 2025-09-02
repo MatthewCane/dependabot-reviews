@@ -1,6 +1,6 @@
 # Dependabot PR Review Assistant
 
-Streamline your Dependabot pull request review process with this interactive command-line assistant. This script automates the fetching, display, and approval of Dependabot PRs, allowing you to quickly manage dependency updates and maintain your project's security and health.
+A wapper around the Github CLI, this tool aims to streamline your Dependabot pull request review process with this interactive command-line assistant. This script automates the fetching, display, and approval of Dependabot PRs, allowing you to quickly manage dependency updates and maintain your project's security and health.
 
 ## Features
 
@@ -10,26 +10,23 @@ Streamline your Dependabot pull request review process with this interactive com
 
 ## Installation
 
-This script requires `uv` and the GitHub CLI (`gh`).
+This script requires `uv` and the GitHub CLI.
 
 1. **Install GitHub CLI:**
-    Follow the instructions on the [GitHub CLI documentation](https://cli.github.com/) to install `gh` for your operating system.
-    After installation, log in to your GitHub account:
-    `gh auth login`
+    Follow the instructions on the [GitHub CLI documentation](https://github.com/cli/cli#installation) to install the CLI for your operating system. After installation, log in to your GitHub account with `gh auth login`
 
-2. **Install Python Dependencies:**
-    This script uses [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management.
+2. **Install uv:**
+    Follow the instructions on the [uv documentation](https://docs.astral.sh/uv/getting-started/installation/) to install uv for your operating system.
 
-## Configuration
-
-Ensure you are logged into GitHub CLI (`gh auth login`). The script uses your GitHub CLI authentication to make changes and fetch data. No additional token configuration is required.
+3. **Install the tool using uv:**
+    `uv tool install git+https://github.com/MatthewCane/dependabot-reviews`
 
 ## Usage
 
-Once installed and configured, you can run the script to start reviewing Dependabot PRs.
+Once installed, you can run the script to start reviewing Dependabot PRs:
 
 ```bash
-uv run dependabot_reviews
+uvx dependabot-reviews
 ```
 
 This will launch the interactive review assistant in your terminal. Follow the on-screen prompts to approve and merge PRs.
