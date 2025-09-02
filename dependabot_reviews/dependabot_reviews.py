@@ -1,39 +1,29 @@
-#! /usr/bin/env uv run --script
-
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "rich",
-#     "furl",
-# ]
-# ///
 import asyncio
-import subprocess
 import json
-from rich.console import Console
+import subprocess
+from textwrap import dedent
+
 from furl import furl
+from rich.console import Console
 
 
 class PullRequest:
-    def __init__(self, repository: str, title: str, url: str, labels: list[str]):
+    def __init__(self, repository: str, title: str, url: str):
         self.repository: str = repository
         self.title: str = title
         self._url: furl = furl(url)
-        self.labels_str: str = self._format_labels(labels)
         self.checks_str: str = self._get_and_format_checks()
 
-    def __repr__(self) -> str:
-        return f"PullRequest(repository='{self.repository}', title='{self.title}', url='{self.url}', labels='{self.labels}')"
+    def __rich__(self) -> str:
+        return dedent(f"""
+            [bold purple]{self.repository}[/]
+            Title: [white]{self.title}[/]
+            URL: {self.url}
+            Required Checks: {self.checks_str}""")
 
     @property
     def url(self) -> str:
         return self._url.url
-
-    def _format_labels(self, labels: list) -> str:
-        if labels == []:
-            return ""
-
-        return str("[" + ",".join([label["name"] for label in labels]) + "]")
 
     def _get_and_format_checks(self) -> str:
         status_checks = execute_gh_command(
@@ -44,9 +34,24 @@ class PullRequest:
             return "[yellow] Checks not found[/yellow]"
         for check in status_checks:
             if check["conclusion"] != "SUCCESS":
-                return "[red] Checks not passed[/red]"
+                return "[red]Checks not passed[/red]"
             else:
-                return "[green] Checks passed[/green]"
+                return "[green]Checks passed[/green]"
+
+    def approve(self) -> None:
+        """
+        Approves the PR with the message "@dependabot merge".
+        """
+        execute_gh_command(
+            f"pr review {self.url} --approve --body '@dependabot merge'",
+            return_response=False,
+        )
+
+    def close(self) -> None:
+        """
+        Closes the PR without merging.
+        """
+        execute_gh_command(f"pr close {self.url}", return_response=False)
 
 
 def execute_gh_command(command: str, return_response: bool = True) -> dict | None:
@@ -84,39 +89,26 @@ async def get_pending_dependabot_prs() -> list[PullRequest]:
     )
 
     return await asyncio.gather(
-        *[asyncio.to_thread(PullRequest, pr["repository"]["nameWithOwner"], pr["title"], pr["url"], pr["labels"]) for pr in response]
+        *[
+            asyncio.to_thread(
+                PullRequest,
+                pr["repository"]["nameWithOwner"],
+                pr["title"],
+                pr["url"],
+            )
+            for pr in response
+        ]
     )
-    
-
-
-def approve_pr(pr: str) -> None:
-    """
-    Approves a PR with the message "@dependabot merge".
-    """
-    execute_gh_command(
-        f"pr review {pr.url} --approve --body '@dependabot merge'",
-        return_response=False,
-    )
-
-
-def close_pr(pr: PullRequest) -> None:
-    """
-    Closes a PR.
-    """
-    execute_gh_command(f"pr close {pr.url}", return_response=False)
-
-
-def format_message(pr: PullRequest):
-    return f"[bold]{pr.repository}[/bold]:{pr.labels_str} '{pr.title}' {pr.url}{pr.checks_str}"
 
 
 async def main() -> None:
     terminal = Console()
     with terminal.status("Fetching PRs..."):
         prs = await get_pending_dependabot_prs()
-    terminal.print(f"Found [red]{len(prs)}[/red] pending dependabot PRs to review")
+    count = f"[red]{len(prs)}[/red]" if prs else "[green]0[/green]"
+    terminal.print(f"Found {count} pending dependabot PRs to review")
     for pr in prs:
-        terminal.print(format_message(pr))
+        terminal.print(pr)
         terminal.print(
             "Approve? ([bold]y[/bold]es/[bold]c[/bold]lose/[bold]N[/bold]o) ",
             end="",
@@ -124,19 +116,11 @@ async def main() -> None:
         option = terminal.input().lower().strip()
         if option in ["y", "yes"]:
             with terminal.status("Approving..."):
-                approve_pr(pr)
+                pr.approve()
                 terminal.print("[green][bold]Approved[/]")
         elif option in ["c", "close"]:
             with terminal.status("Closing..."):
-                close_pr(pr)
+                pr.close()
                 terminal.print("[red][bold]Closed[/]")
         else:
             terminal.print("[yellow]Skipped[/yellow]")
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\nAborted")
-        exit(0)

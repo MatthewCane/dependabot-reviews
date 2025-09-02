@@ -1,31 +1,35 @@
 # Dependabot PR Review Assistant
 
-This script helps speed up the process of reviewing and approving Dependabot pull requests. It fetches open Dependabot PRs that require your review, displays relevant information, and allows you to approve and merge them quickly.
+Streamline your Dependabot pull request review process with this interactive command-line assistant. This script automates the fetching, display, and approval of Dependabot PRs, allowing you to quickly manage dependency updates and maintain your project's security and health.
 
 ## Features
 
-- Fetches open Dependabot pull requests where you are requested as a reviewer
-- Displays PR information including repository, title, labels, and check status
-- Allows you to approve PRs with a single keypress
+- **Fetching:** Automatically retrieves open Dependabot pull requests where you are a requested reviewer.
+- **Overview:** Displays essential PR information at a glance, including repository name, PR title, associated labels, and the status of CI/CD checks.
+- **Approval & Merging:** Approve and merge Dependabot PRs with a single keypress, significantly reducing manual effort.
 
 ## Installation
 
-This script includes [uv](https://docs.astral.sh/uv/getting-started/installation/) compatable inline script dependencies.
+This script requires `uv` and the GitHub CLI (`gh`).
 
-Alternatively, you can install the dependencies manually with `pip install rich furl`.
+1. **Install GitHub CLI:**
+    Follow the instructions on the [GitHub CLI documentation](https://cli.github.com/) to install `gh` for your operating system.
+    After installation, log in to your GitHub account:
+    `gh auth login`
 
-You will need to have the Github CLI installed and be logged in to your GitHub account.
+2. **Install Python Dependencies:**
+    This script uses [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management.
+
+## Configuration
+
+Ensure you are logged into GitHub CLI (`gh auth login`). The script uses your GitHub CLI authentication to make changes and fetch data. No additional token configuration is required.
 
 ## Usage
 
-If you have `uv` installed, you can run the script directly with:
+Once installed and configured, you can run the script to start reviewing Dependabot PRs.
 
 ```bash
-uv run dependabot_reviews.py
+uv run dependabot_reviews
 ```
 
-Alternatively, you can copy the script into a directory in your PATH and run it directly:
-
-```bash
-cp dependabot_reviews.py ~/bin/dependabot-reviews
-```
+This will launch the interactive review assistant in your terminal. Follow the on-screen prompts to approve and merge PRs.

@@ -1,0 +1,39 @@
+[project]
+name = "dependabot-reviews"
+version = "0.1.0"
+description = "A command-line tool to streamline the review and merging of Dependabot pull requests."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "furl>=2.1.4",
+    "httpx>=0.28.1",
+    "pygithub>=2.7.0",
+    "rich>=14.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.11",
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "dependabot_reviews"
+module-root = "."
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.lint]
+ignore = ['E501']
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "N",   # pep8-naming
+    "I",   # isort
+    "RUF", # Ruff specific rules
+]
