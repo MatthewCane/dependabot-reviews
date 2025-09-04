@@ -117,7 +117,7 @@ def parse_args() -> Namespace:
     argparser.add_argument(
         "--repo",
         type=str,
-        help="filter the results to a specific repository. Searches all repos by default.",
+        help="filter the results to a specific repository. Searches all repos by default",
     )
     argparser.add_argument(
         "--all-reviewers",

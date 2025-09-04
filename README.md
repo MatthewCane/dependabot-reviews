@@ -29,4 +29,9 @@ Once installed, you can run the script to start reviewing Dependabot PRs:
 uvx dependabot-reviews
 ```
 
-This will launch the interactive review assistant in your terminal. Follow the on-screen prompts to approve and merge PRs.
+This will launch the interactive review assistant in your terminal. Follow the on-screen prompts to approve and merge PRs. You can also modify the PR search space with the following arguments:
+
+| flag              | Help                                                                        |
+| ----------------- | --------------------------------------------------------------------------- |
+| `--repo REPO`     | filter the results to a specific repository. Searches all repos by default  |
+| `--all-reviewers` | if set, will not filter PRs to only those assigned to you to review         |
