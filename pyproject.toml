@@ -17,7 +17,7 @@ dev = [
 ]
 
 [project.scripts]
-dependabot-reviews = "dependabot_reviews.dependabot_reviews:cli"
+dependabot-reviews = "dependabot_reviews.main:cli"
 
 [build-system]
 requires = ["uv_build"]
@@ -25,7 +25,7 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "dependabot_reviews"
-module-root = "."
+module-root = "src"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

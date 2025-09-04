@@ -1,11 +1,12 @@
 import asyncio
 import json
-import subprocess
 import webbrowser
 from textwrap import dedent
 
 from furl import furl
 from rich.console import Console
+
+from dependabot_reviews.gh_cli_caller import execute_gh_command
 
 
 class PullRequest:
@@ -41,17 +42,18 @@ class PullRequest:
         return text.strip()
 
     def _get_and_format_checks(self) -> str:
-        status_checks = execute_gh_command(
+        result = execute_gh_command(
             f"pr view {self.url} --json statusCheckRollup"
-        )["statusCheckRollup"]
+        ).stdout
 
-        if status_checks == []:
-            return "[yellow]Checks not found[/yellow]"
+        status_checks = json.loads(result)["statusCheckRollup"]
+
         for check in status_checks:
             if check["conclusion"] != "SUCCESS":
                 return "[red]Checks not passed[/red]"
             else:
                 return "[green]Checks passed[/green]"
+        return "[yellow]Checks not found[/yellow]"
 
     def approve(self) -> None:
         """
@@ -59,44 +61,13 @@ class PullRequest:
         """
         execute_gh_command(
             f"pr review {self.url} --approve --body '@dependabot merge'",
-            return_json=False,
         )
 
     def close(self) -> None:
         """
         Closes the PR without merging.
         """
-        execute_gh_command(f"pr close {self.url}", return_json=False)
-
-
-def execute_gh_command(
-    command: str, return_json: bool = True, return_status: bool = False
-) -> dict | None:
-    """
-    Execute a Github CLI command and return the JSON output.
-    """
-    try:
-        result = subprocess.run(
-            f"gh {command}",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-        )
-        if return_json:
-            return json.loads(result.stdout)
-        if return_status:
-            return not bool(result.returncode)
-    except subprocess.CalledProcessError as e:
-        error_message = f"Command failed with exit code {e.returncode}\n"
-        error_message += f"stdout: {e.stdout}\n"
-        error_message += f"stderr: {e.stderr}"
-        raise RuntimeError(error_message) from e
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            f"Failed to parse JSON output: {e}\nOutput: {result.stdout}"
-        ) from e
+        execute_gh_command(f"pr close {self.url}")
 
 
 async def get_pending_dependabot_prs() -> list[PullRequest]:
@@ -107,7 +78,9 @@ async def get_pending_dependabot_prs() -> list[PullRequest]:
         "search prs --state open --author 'dependabot[bot]'  --review-requested @me --json repository,title,url,labels"
     )
 
-    return await asyncio.gather(
+    pull_requests = json.loads(response.stdout)
+
+    result = await asyncio.gather(
         *[
             asyncio.to_thread(
                 PullRequest,
@@ -116,9 +89,11 @@ async def get_pending_dependabot_prs() -> list[PullRequest]:
                 pr["url"],
                 pr["labels"],
             )
-            for pr in response
+            for pr in pull_requests
         ]
     )
+
+    return list(result)
 
 
 def check_gh_auth_status() -> bool:
@@ -126,7 +101,7 @@ def check_gh_auth_status() -> bool:
     Check if the user is authenticated with GitHub CLI.
     """
     try:
-        return execute_gh_command("auth status", return_json=False, return_status=True)
+        return not execute_gh_command("auth status").returncode
     except RuntimeError:
         return False
 
