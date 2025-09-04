@@ -1,6 +1,7 @@
 import asyncio
 import json
 import webbrowser
+from argparse import ArgumentParser, Namespace
 from textwrap import dedent
 
 from furl import furl
@@ -70,12 +71,17 @@ class PullRequest:
         execute_gh_command(f"pr close {self.url}")
 
 
-async def get_pending_dependabot_prs() -> list[PullRequest]:
+async def get_pending_dependabot_prs(
+    repo: str | None, requested_by_me: bool = True
+) -> list[PullRequest]:
     """
     Return a list of pending dependabot PRs.
     """
+    repo_str = f"--repo {repo}" if repo else ""
+    requester_str = "--review-requested @me" if requested_by_me else ""
+
     response = execute_gh_command(
-        "search prs --state open --author 'dependabot[bot]'  --review-requested @me --json repository,title,url,labels"
+        f"search prs --state open --author 'dependabot[bot]' {repo_str} {requester_str} --json repository,title,url,labels"
     )
 
     pull_requests = json.loads(response.stdout)
@@ -106,15 +112,40 @@ def check_gh_auth_status() -> bool:
         return False
 
 
+def parse_args() -> Namespace:
+    argparser = ArgumentParser()
+    argparser.add_argument(
+        "--repo",
+        type=str,
+        help="filter the results to a specific repository. Searches all repos by default.",
+    )
+    argparser.add_argument(
+        "--all-reviewers",
+        action="store_true",
+        help="if set, will not filter PRs to only those assigned to you to review",
+    )
+    return argparser.parse_args()
+
+
 async def main() -> None:
     terminal = Console()
+    args = parse_args()
+
+    if args.all_reviewers and not args.repo:
+        terminal.print(
+            "[red]If --all-revewers is passed, a repo must be specified[/red]"
+        )
+        exit(1)
     if not check_gh_auth_status():
         terminal.print(
             "[red]You are not logged in to GitHub CLI or the Github CLI is not installed. Please run 'gh auth login' and try again.[/red]"
         )
         exit(1)
+
     with terminal.status("Fetching PRs..."):
-        prs = await get_pending_dependabot_prs()
+        prs = await get_pending_dependabot_prs(
+            repo=args.repo, requested_by_me=not args.all_reviewers
+        )
     count = f"[red]{len(prs)}[/red]" if prs else "[green]0[/green]"
     terminal.print(f"Found {count} pending dependabot PRs to review")
     for pr in prs:
