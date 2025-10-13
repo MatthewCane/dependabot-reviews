@@ -2,6 +2,7 @@ import asyncio
 import json
 import webbrowser
 from argparse import ArgumentParser, Namespace
+from subprocess import CalledProcessError
 from textwrap import dedent
 
 from furl import furl
@@ -15,7 +16,7 @@ class PullRequest:
         self.repository: str = repository
         self.title: str = title
         self._url: furl = furl(url)
-        self.checks_str: str = self._get_and_format_checks()
+        self.checks_str, self.checks_status = self._get_and_format_checks()
         self.labels: str = self._format_labels(labels)
 
     def __rich__(self) -> str:
@@ -42,7 +43,7 @@ class PullRequest:
         text = ", ".join(styled_labels)
         return text.strip()
 
-    def _get_and_format_checks(self) -> str:
+    def _get_and_format_checks(self) -> tuple[str, bool]:
         result = execute_gh_command(
             f"pr view {self.url} --json statusCheckRollup"
         ).stdout
@@ -51,15 +52,16 @@ class PullRequest:
 
         for check in status_checks:
             if check["conclusion"] != "SUCCESS":
-                return "[red]Checks not passed[/red]"
+                return ("[red]Checks not passed[/red]", False)
             else:
-                return "[green]Checks passed[/green]"
-        return "[yellow]Checks not found[/yellow]"
+                return ("[green]Checks passed[/green]", True)
+        return ("[yellow]Checks not found[/yellow]", True)
 
     def approve(self) -> None:
         """
         Approves the PR.
         """
+
         execute_gh_command(
             f"pr review {self.url} --approve",
         )
@@ -67,9 +69,26 @@ class PullRequest:
     def merge(self) -> None:
         """
         Merge the PR.
+
+        Will first try to merge using a standard merge, and if that fails,
+        will try to merge using a squash merge.
         """
+        if not self.checks_status:
+            execute_gh_command(
+                f"pr merge {self.url} --merge --auto --delete-branch",
+            )
+            return
+
+        try:
+            execute_gh_command(
+                f"pr merge {self.url} --merge --delete-branch",
+            )
+            return
+        except CalledProcessError:
+            pass
+
         execute_gh_command(
-            f"pr merge {self.url} --merge --delete-branch",
+            f"pr merge {self.url} --squash --delete-branch",
         )
 
     def close(self) -> None:
@@ -136,52 +155,60 @@ def parse_args() -> Namespace:
 
 
 async def main() -> None:
-    terminal = Console()
+    console = Console()
     args = parse_args()
 
     if args.all_reviewers and not args.repo:
-        terminal.print(
+        console.print(
             "[red]If --all-revewers is passed, a repo must be specified[/red]"
         )
         exit(1)
     if not check_gh_auth_status():
-        terminal.print(
+        console.print(
             "[red]You are not logged in to GitHub CLI or the Github CLI is not installed. Please run 'gh auth login' and try again.[/red]"
         )
         exit(1)
 
-    with terminal.status("Fetching PRs..."):
+    with console.status("Fetching PRs..."):
         prs = await get_pending_dependabot_prs(
             repo=args.repo, requested_by_me=not args.all_reviewers
         )
+
     count = f"[red]{len(prs)}[/red]" if prs else "[green]0[/green]"
-    terminal.print(f"Found {count} pending dependabot PRs to review")
+    console.print(f"Found {count} pending dependabot PRs to review")
+
     for pr in prs:
-        terminal.print(pr)
+        console.print(pr)
         while True:
-            terminal.print(
+            console.print(
                 "Merge? ([bold]y[/]es/[bold]c[/]lose/[bold]o[/]pen in browser/[bold]N[/]o) ",
                 end="",
             )
-            option = terminal.input().lower().strip()
+            option = console.input().lower().strip()
             if option in ["y", "yes"]:
-                with terminal.status("Merging..."):
-                    pr.approve()
-                    pr.merge()
-                    terminal.print(
+                with console.status("Merging..."):
+                    try:
+                        pr.approve()
+                        pr.merge()
+                    except CalledProcessError as e:
+                        console.print(
+                            f"[red][bold]Failed to approve and merge pull request: {e.stderr}[/]"
+                        )
+                        break
+                    console.print(
                         "[green][bold]Merge requested (may be queued or set to automerge)[/]"
                     )
                     break
             elif option in ["c", "close"]:
-                with terminal.status("Closing..."):
+                with console.status("Closing..."):
                     pr.close()
-                    terminal.print("[red][bold]Closed[/]")
+                    console.print("[red][bold]Closed[/]")
                     break
             elif option in ["o", "open"]:
                 webbrowser.open(pr.url)
-                terminal.print("[blue]Opened in browser[/blue]")
+                console.print("[blue]Opened in browser[/blue]")
             else:
-                terminal.print("[yellow]Skipped[/yellow]")
+                console.print("[yellow]Skipped[/yellow]")
                 break
 
 
