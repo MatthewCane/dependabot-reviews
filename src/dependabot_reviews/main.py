@@ -56,6 +56,14 @@ class PullRequest:
                 return "[green]Checks passed[/green]"
         return "[yellow]Checks not found[/yellow]"
 
+    def approve(self) -> None:
+        """
+        Approves the PR.
+        """
+        execute_gh_command(
+            f"pr review {self.url} --approve",
+        )
+
     def merge(self) -> None:
         """
         Merge the PR.
@@ -158,6 +166,7 @@ async def main() -> None:
             option = terminal.input().lower().strip()
             if option in ["y", "yes"]:
                 with terminal.status("Merging..."):
+                    pr.approve()
                     pr.merge()
                     terminal.print(
                         "[green][bold]Merge requested (may be queued or set to automerge)[/]"
