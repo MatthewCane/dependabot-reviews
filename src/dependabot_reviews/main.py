@@ -56,12 +56,12 @@ class PullRequest:
                 return "[green]Checks passed[/green]"
         return "[yellow]Checks not found[/yellow]"
 
-    def approve(self) -> None:
+    def merge(self) -> None:
         """
-        Approves the PR with the message "@dependabot merge".
+        Merge the PR.
         """
         execute_gh_command(
-            f"pr review {self.url} --approve --body '@dependabot merge'",
+            f"pr merge {self.url}",
         )
 
     def close(self) -> None:
@@ -152,14 +152,16 @@ async def main() -> None:
         terminal.print(pr)
         while True:
             terminal.print(
-                "Approve? ([bold]y[/]es/[bold]c[/]lose/[bold]o[/]pen in browser/[bold]N[/]o) ",
+                "Merge? ([bold]y[/]es/[bold]c[/]lose/[bold]o[/]pen in browser/[bold]N[/]o) ",
                 end="",
             )
             option = terminal.input().lower().strip()
             if option in ["y", "yes"]:
-                with terminal.status("Approving..."):
-                    pr.approve()
-                    terminal.print("[green][bold]Approved[/]")
+                with terminal.status("Merging..."):
+                    pr.merge()
+                    terminal.print(
+                        "[green][bold]Merge requested (may be queued or set to automerge)[/]"
+                    )
                     break
             elif option in ["c", "close"]:
                 with terminal.status("Closing..."):

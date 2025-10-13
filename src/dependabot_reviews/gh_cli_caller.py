@@ -1,5 +1,5 @@
 import json
-from subprocess import PIPE, CalledProcessError, CompletedProcess, run
+from subprocess import CalledProcessError, CompletedProcess, run
 
 
 def execute_gh_command(command: str) -> CompletedProcess:
@@ -10,8 +10,7 @@ def execute_gh_command(command: str) -> CompletedProcess:
         result = run(
             f"gh {command}",
             shell=True,
-            stdout=PIPE,
-            stderr=PIPE,
+            capture_output=True,
             text=True,
             check=True,
         )
