@@ -69,7 +69,7 @@ class PullRequest:
         Merge the PR.
         """
         execute_gh_command(
-            f"pr merge {self.url}",
+            f"pr merge {self.url} --merge --delete-branch",
         )
 
     def close(self) -> None:
