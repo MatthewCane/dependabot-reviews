@@ -1,6 +1,6 @@
 [project]
 name = "dependabot-reviews"
-version = "0.4.1"
+version = "0.4.2"
 description = "A command-line tool to streamline the review and merging of Dependabot pull requests."
 readme = "README.md"
 requires-python = ">=3.10"
