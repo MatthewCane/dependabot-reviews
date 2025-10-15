@@ -12,12 +12,19 @@ from dependabot_reviews.gh_cli_caller import execute_gh_command
 
 
 class PullRequest:
-    def __init__(self, repository: str, title: str, url: str, labels: list[dict]):
+    def __init__(
+        self,
+        repository: str,
+        title: str,
+        url: str,
+        labels: list[dict],
+    ):
         self.repository: str = repository
         self.title: str = title
         self._url: furl = furl(url)
         self.checks_str, self.checks_status = self._get_and_format_checks()
         self.labels: str = self._format_labels(labels)
+        self.mergeable: bool = self._is_mergeable()
 
     def __rich__(self) -> str:
         return dedent(f"""
@@ -25,11 +32,20 @@ class PullRequest:
             Title: [white]{self.title}[/]
             URL: {self.url}
             Labels: {self.labels}
-            Required Checks: {self.checks_str}""")
+            Required Checks: {self.checks_str}
+            Mergeable: {self.mergeable}""")
 
     @property
     def url(self) -> str:
         return self._url.url
+
+    def _is_mergeable(self) -> bool:
+        return (
+            json.loads(
+                execute_gh_command(f"pr view {self.url} --json mergeable").stdout
+            )["mergeable"]
+            == "MERGEABLE"
+        )
 
     def _format_labels(self, labels: dict) -> str:
         if labels == []:
@@ -66,30 +82,31 @@ class PullRequest:
             f"pr review {self.url} --approve",
         )
 
-    def merge(self) -> None:
+    def merge(self) -> str:
         """
         Merge the PR.
 
         Will first try to merge using a standard merge, and if that fails,
         will try to merge using a squash merge.
         """
-        if not self.checks_status:
+        if not self.mergeable:
             execute_gh_command(
                 f"pr merge {self.url} --merge --auto --delete-branch",
             )
-            return
+            return "Not mergeable, PR set to auto-merge"
 
         try:
             execute_gh_command(
                 f"pr merge {self.url} --merge --delete-branch",
             )
-            return
+            return "Merged with standard merge"
         except CalledProcessError:
             pass
 
         execute_gh_command(
             f"pr merge {self.url} --squash --delete-branch",
         )
+        return "Merged with squash merge"
 
     def close(self) -> None:
         """
@@ -189,15 +206,13 @@ async def main() -> None:
                 with console.status("Merging..."):
                     try:
                         pr.approve()
-                        pr.merge()
+                        result = pr.merge()
                     except CalledProcessError as e:
                         console.print(
                             f"[red][bold]Failed to approve and merge pull request: {e.stderr}[/]"
                         )
                         break
-                    console.print(
-                        "[green][bold]Merge requested (may be queued or set to automerge)[/]"
-                    )
+                    console.print(f"[green][bold]{result}[/]")
                     break
             elif option in ["c", "close"]:
                 with console.status("Closing..."):
