@@ -47,7 +47,7 @@ class PullRequest:
             == "MERGEABLE"
         )
 
-    def _format_labels(self, labels: dict) -> str:
+    def _format_labels(self, labels: list) -> str:
         if labels == []:
             return "[yellow]No labels[/yellow]"
 
